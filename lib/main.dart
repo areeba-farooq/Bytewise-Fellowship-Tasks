@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'Project2/Picture-Sharing-app/pages/login_pg.dart';
 
-import 'Animations-task9/animation_task.dart';
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
 
-void main() {
   runApp(const MyApp());
 }
 
@@ -23,7 +26,7 @@ class MyApp extends StatelessWidget {
       //   '/signup': (context) => const Signup(),
       //   '/home': (context) => const HomePage(),
       // },
-      home: const AnimatedBox(),
+      home: const PicShowLoginScreen(),
     );
   }
 }
