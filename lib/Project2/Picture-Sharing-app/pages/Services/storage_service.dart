@@ -1,38 +1,48 @@
-import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:bytewise_fellowship_tasks/Project2/Picture-Sharing-app/model/post_model.dart';
+import 'package:bytewise_fellowship_tasks/Project2/Picture-Sharing-app/pages/Services/auth_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:uuid/uuid.dart';
 
 class StorageService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
-
-  Future<List<String>> uploadMultipleImages(List<File> files) async {
-    List<String> downloadUrls = [];
-    for (int i = 0; i < files.length; i++) {
-      Reference ref = _storage.ref().child('images/${DateTime.now()}');
-      UploadTask uploadTask = ref.putFile(files[i]);
-      await uploadTask.whenComplete(() async {
-        String url = await ref.getDownloadURL();
-        downloadUrls.add(url);
-      });
-    }
-    return downloadUrls;
-  }
-}
-
-class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final AuthService _authService = AuthService();
 
-  Future<void> postImages(String title, List<String> downloadUrls) async {
+  Future<String> imageToStorage(Uint8List file) async {
     try {
-      CollectionReference imagesRef = _firestore.collection('images');
-      await imagesRef.add({
-        'title': title,
-        'downloadUrls': downloadUrls,
-        'createdAt': Timestamp.now(),
-      });
+      String id = const Uuid().v1();
+      Reference ref = _storage.ref().child('posts').child(id);
+      UploadTask uploadTask = ref.putData(file);
+      TaskSnapshot snapshot = await uploadTask;
+      String downloadURL = await snapshot.ref.getDownloadURL();
+      return downloadURL;
     } catch (e) {
-      print(e);
+      rethrow;
     }
+  }
+
+  Future<String> uploadPost(String uid, String title, Uint8List file) async {
+    String res = 'Some Error Occurred';
+    try {
+      String? uid =
+          await _authService.getCurrentUserId(); // Retrieve the user's UID
+
+      String photoUrl = await imageToStorage(file);
+      String postId = const Uuid().v1();
+      PostModel postModel = PostModel(
+          title: title,
+          postID: postId,
+          postURL: photoUrl,
+          datePublished: DateTime.now(),
+          uid: uid!);
+      _firestore.collection('posts').doc(postId).set(postModel.toJason());
+      res = 'success';
+    } catch (e) {
+      res = e.toString();
+    }
+    return res;
   }
 }
